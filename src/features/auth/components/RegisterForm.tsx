@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Button, Input } from '@shared/components/ui';
 import { ROUTES } from '@shared/constants';
 import { useAuthStore } from '../auth.store';
@@ -10,6 +11,8 @@ import { registerSchema, type RegisterFormData } from '../schemas/auth.schema';
 export function RegisterForm() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
@@ -30,66 +33,86 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-surface-900">Create account</h2>
-        <p className="mt-1 text-surface-500">Start managing your projects today</p>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-surface-900">Créer un compte ✨</h2>
+        <p className="mt-2 text-surface-500">Commencez à gérer vos projets dès aujourd'hui</p>
       </div>
 
       {error && (
         <div
-          className="rounded-lg bg-danger-50 p-4 text-sm text-danger-600"
+          className="flex items-center gap-2 rounded-lg bg-danger-50 p-3.5 text-sm text-danger-600"
           role="alert"
           onClick={clearError}
         >
+          <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-danger-500 text-xs font-bold text-white">!</div>
           {error}
         </div>
       )}
 
       <Input
-        label="Full Name"
+        label="Nom complet"
         type="text"
-        placeholder="John Doe"
+        placeholder="Jean Dupont"
         error={errors.name?.message}
         {...register('name')}
       />
 
       <Input
-        label="Email"
+        label="Adresse email"
         type="email"
-        placeholder="you@example.com"
+        placeholder="vous@exemple.com"
         error={errors.email?.message}
         {...register('email')}
       />
 
-      <Input
-        label="Password"
-        type="password"
-        placeholder="••••••••"
-        error={errors.password?.message}
-        hint="Must be at least 8 characters with uppercase, lowercase, and number"
-        {...register('password')}
-      />
+      <div className="relative">
+        <Input
+          label="Mot de passe"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="••••••••"
+          error={errors.password?.message}
+          hint="8 caractères min. avec majuscule, minuscule et chiffre"
+          {...register('password')}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((s) => !s)}
+          className="absolute right-4 top-[42px] text-surface-400 transition-colors hover:text-surface-600"
+          tabIndex={-1}
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
 
-      <Input
-        label="Confirm Password"
-        type="password"
-        placeholder="••••••••"
-        error={errors.confirmPassword?.message}
-        {...register('confirmPassword')}
-      />
+      <div className="relative">
+        <Input
+          label="Confirmer le mot de passe"
+          type={showConfirm ? 'text' : 'password'}
+          placeholder="••••••••"
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirm((s) => !s)}
+          className="absolute right-4 top-[42px] text-surface-400 transition-colors hover:text-surface-600"
+          tabIndex={-1}
+        >
+          {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
 
-      <Button type="submit" isLoading={isLoading} className="w-full">
+      <Button type="submit" size="lg" isLoading={isLoading} className="w-full">
         <UserPlus className="h-4 w-4" />
-        Create Account
+        Créer mon compte
       </Button>
 
       <p className="text-center text-sm text-surface-500">
-        Already have an account?{' '}
-        <Link to={ROUTES.LOGIN} className="font-medium text-brand-600 hover:text-brand-700">
-          Sign in
+        Déjà un compte ?{' '}
+        <Link to={ROUTES.LOGIN} className="font-semibold text-brand-600 hover:text-brand-700">
+          Se connecter
         </Link>
       </p>
     </form>
   );
 }
-

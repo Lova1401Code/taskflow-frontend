@@ -25,6 +25,7 @@ interface TasksActions {
   updateTask: (id: string, data: Partial<TaskFormData>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
+  updateTaskStatusOptimistic: (id: string, status: TaskStatus) => void;
   setStatusFilter: (status: TaskStatus | null) => void;
   clearCurrentTask: () => void;
   clearError: () => void;
@@ -151,6 +152,15 @@ export const useTasksStore = create<TasksStore>((set) => ({
   },
 
   setStatusFilter: (status) => set({ statusFilter: status }),
+
+  updateTaskStatusOptimistic: (id, status) => {
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === id ? { ...t, status } : t
+      ),
+    }));
+  },
+
   clearCurrentTask: () => set({ currentTask: null }),
   clearError: () => set({ error: null }),
 }));
