@@ -28,6 +28,7 @@ export interface Task {
   projectId: string;
   userId: string;
   dueDate: string | null;
+  coverImage: string | null;
   createdAt: string;
   updatedAt: string;
 }

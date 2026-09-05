@@ -25,6 +25,16 @@ export function TaskKanbanCard({ task, index, onEdit, onDelete }: TaskKanbanCard
             snapshot.isDragging && 'rotate-2 shadow-float border-brand-300'
           )}
         >
+          {task.coverImage && (
+            <div className="mb-2 overflow-hidden rounded-md">
+              <img
+                src={task.coverImage}
+                alt=""
+                className="h-20 w-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+          )}
           <div className="flex items-start justify-between gap-2">
             <h4
               className={cn(

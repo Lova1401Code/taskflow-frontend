@@ -7,6 +7,7 @@ export const taskSchema = z.object({
   status: z.enum([TASK_STATUS.TODO, TASK_STATUS.IN_PROGRESS, TASK_STATUS.DONE]).default(TASK_STATUS.TODO),
   priority: z.enum([TASK_PRIORITY.LOW, TASK_PRIORITY.MEDIUM, TASK_PRIORITY.HIGH]).default(TASK_PRIORITY.MEDIUM),
   dueDate: z.string().nullable().optional(),
+  coverImage: z.string().nullable().optional(),
   projectId: z.string().optional(),
 });
 

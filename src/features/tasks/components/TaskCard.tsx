@@ -35,7 +35,18 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
   };
 
   return (
-    <div className="group relative flex items-start gap-4 rounded-xl border border-surface-200 bg-white p-4 transition-shadow hover:shadow-card">
+    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-surface-200 bg-white transition-shadow hover:shadow-card">
+      {task.coverImage && (
+        <div className="h-28 w-full overflow-hidden">
+          <img
+            src={task.coverImage}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      )}
+      <div className="flex items-start gap-4 p-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <h3
@@ -140,6 +151,7 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             </span>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
