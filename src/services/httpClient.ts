@@ -3,12 +3,30 @@ import { APP_CONFIG, API_ENDPOINTS } from '@shared/constants';
 import { tokenService } from './token.service';
 import type { ApiError } from '@shared/types';
 
+interface ServerStatusCallbacks {
+  onWarn: () => void;
+  onRetry: (attempt: number, max: number) => void;
+  onError: () => void;
+  onRequestStart: () => void;
+  onRequestEnd: () => void;
+}
+
+let serverStatusCallbacks: ServerStatusCallbacks | null = null;
+
+export function configureServerStatusCallbacks(callbacks: ServerStatusCallbacks): void {
+  serverStatusCallbacks = callbacks;
+}
+
+const WARN_AFTER = 3000;
+const MAX_RETRIES = 2;
+const RETRY_DELAYS = [2000, 5000];
+
 const httpClient: AxiosInstance = axios.create({
   baseURL: APP_CONFIG.apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 const AUTH_EXCLUDED_ENDPOINTS = [
@@ -22,6 +40,11 @@ httpClient.interceptors.request.use(
     const token = tokenService.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (serverStatusCallbacks) {
+      serverStatusCallbacks.onRequestStart();
+      const warnTimer = setTimeout(() => serverStatusCallbacks?.onWarn(), WARN_AFTER);
+      (config as InternalAxiosRequestConfig & { _warnTimer?: ReturnType<typeof setTimeout> })._warnTimer = warnTimer;
     }
     return config;
   },
@@ -46,11 +69,23 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 httpClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const config = response.config as InternalAxiosRequestConfig & { _warnTimer?: ReturnType<typeof setTimeout> };
+    if (config._warnTimer) clearTimeout(config._warnTimer);
+    if (serverStatusCallbacks) serverStatusCallbacks.onRequestEnd();
+    return response;
+  },
   async (error: AxiosError<ApiError>) => {
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const originalRequest = error.config as (InternalAxiosRequestConfig & {
+      _retry?: boolean;
+      _retryCount?: number;
+      _warnTimer?: ReturnType<typeof setTimeout>;
+    }) | undefined;
+
+    if (originalRequest?._warnTimer) clearTimeout(originalRequest._warnTimer);
 
     if (!originalRequest) {
+      if (serverStatusCallbacks) serverStatusCallbacks.onError();
       const apiError: ApiError = {
         message: error.response?.data?.message || 'Network error',
         errors: error.response?.data?.errors,
@@ -58,6 +93,24 @@ httpClient.interceptors.response.use(
       };
       return Promise.reject(apiError);
     }
+
+    const isTimeout = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
+    const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message?.includes('Network'));
+    const shouldRetry = (isTimeout || isNetworkError) && !originalRequest._retry;
+    const retryCount = originalRequest._retryCount || 0;
+
+    if (shouldRetry && retryCount < MAX_RETRIES) {
+      originalRequest._retryCount = retryCount + 1;
+      if (serverStatusCallbacks) serverStatusCallbacks.onRetry(retryCount + 1, MAX_RETRIES);
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS[retryCount] || 5000));
+      return httpClient(originalRequest);
+    }
+
+    if ((isTimeout || isNetworkError) && retryCount >= MAX_RETRIES) {
+      if (serverStatusCallbacks) serverStatusCallbacks.onError();
+    }
+
+    if (serverStatusCallbacks) serverStatusCallbacks.onRequestEnd();
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       const requestUrl = originalRequest.url || '';
